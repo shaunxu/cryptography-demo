@@ -5,6 +5,8 @@ const fs = require('fs');
 
 const _ = require('lodash');
 const ursa = require('ursa');
+const moment = require('moment');
+const randomstring = require('randomstring');
 
 const demo1 = function () {
 
@@ -199,7 +201,78 @@ const demo6 = function () {
 
 };
 
-const demo7 = function () {
+const demo7 = function (round = 1000, bytes = 128) {
+	const symmetric_encrypt = function (text, key, iv) {
+		const encrypter = crypto.createCipheriv(`aes-256-cbc`, crypto.createHash(`sha256`).update(key, `utf8`).digest(), iv || Buffer.alloc(16, 0));
+		let cipher = encrypter.update(text, `utf8`, `base64`);
+		cipher += encrypter.final(`base64`);
+		return cipher;
+	};
+
+	const symmetric_decrypt = function (cipher, key, iv) {
+		const decrypter = crypto.createDecipheriv(`aes-256-cbc`, crypto.createHash(`sha256`).update(key, `utf8`).digest(), iv || Buffer.alloc(16, 0));
+		let result = decrypter.update(cipher, `base64`, `utf8`);
+		result += decrypter.final(`utf8`);
+		return result;
+	};
+
+	const asymmetric_encrypt = function (text, key) {
+		const cipher = crypto.publicEncrypt(Buffer.from(key, `base64`), Buffer.from(text, `utf8`));
+		return cipher.toString(`base64`);
+	};
+
+	const asymmetric_decrypt = function (cipher, key) {
+		const result = crypto.privateDecrypt(Buffer.from(key, `base64`), Buffer.from(cipher, `base64`));
+		return result.toString(`utf8`);
+	};
+
+	const content = randomstring.generate(bytes);
+	const symmetric_key = `i love worktile`;	
+	const asymmetric_private_key = ursa.generatePrivateKey();
+	const asymmetric_key = {
+		public: asymmetric_private_key.toPublicPem(`base64`),
+		private: asymmetric_private_key.toPrivatePem(`base64`)	
+	};
+
+	console.log(`[${moment().format('YYYY-MM-DD HH:mm:ss.SSS')}] benchmark, round: ${round}, start.`);
+
+	const symmetric_encrypt_ciphers = [];
+	const symmetric_encrypt_start = Date.now();
+	for (let i = 0; i < round; i++) {
+		symmetric_encrypt_ciphers.push(symmetric_encrypt(content, symmetric_key));
+	}
+	const symmetric_encrypt_end = Date.now();
+
+	const symmetric_decrypt_start = Date.now();
+	for (const symmetric_encrypt_cipher of symmetric_encrypt_ciphers) {
+		symmetric_decrypt(symmetric_encrypt_cipher, symmetric_key);
+	}
+	const symmetric_decrypt_end = Date.now();
+
+	const asymmetric_encrypt_chipers = [];
+	const asymmetric_encrypt_start = Date.now();
+	for (let i = 0; i < round; i++) {
+		asymmetric_encrypt_chipers.push(asymmetric_encrypt(content, asymmetric_key.public));
+	}
+	const asymmetric_encrypt_end = Date.now();
+
+	const asymmetric_decrypt_start = Date.now();
+	for (const asymmetric_encrypt_cipher of asymmetric_encrypt_chipers) {
+		asymmetric_decrypt(asymmetric_encrypt_cipher, asymmetric_key.private);
+	}
+	const asymmetric_decrypt_end = Date.now();
+	console.log(`[${moment().format('YYYY-MM-DD HH:mm:ss.SSS')}] benchmark, round: ${round}, end.`);
+	
+	console.log(`round:\t${round}`);
+	console.log(`bytes:\t${bytes}`);
+	console.log(`symmetric_encrypt:\t${symmetric_encrypt_end - symmetric_encrypt_start}ms`);
+	console.log(`symmetric_encrypt:\t${symmetric_encrypt_end - symmetric_encrypt_start}ms`);
+	console.log(`symmetric_decrypt:\t${symmetric_decrypt_end - symmetric_decrypt_start}ms`);
+	console.log(`asymmetric_encrypt:\t${asymmetric_encrypt_end - asymmetric_encrypt_start}ms`);
+	console.log(`asymmetric_decrypt:\t${asymmetric_decrypt_end - asymmetric_decrypt_start}ms`);
+};
+
+const demo8 = function () {
 
 	const sign = function (privateKeyPath, profilePath) {
 		const private_key = fs.readFileSync(privateKeyPath, `utf8`);	
@@ -237,8 +310,8 @@ const demo7 = function () {
 
 };
 
-const demo8 = function () {
+const demo9 = function () {
 	console.log(JSON.stringify(crypto.getHashes(), null, 2));
 };
 
-demo5();
+demo7();

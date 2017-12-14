@@ -11,6 +11,8 @@
   "license": "ISC",
   "dependencies": {
     "lodash": "^4.17.4",
+    "moment": "^2.19.4",
+    "randomstring": "^1.1.5",
     "ursa": "^0.9.4"
   }
 }
